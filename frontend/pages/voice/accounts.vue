@@ -19,22 +19,20 @@
       <v-table fixed-header>
         <thead>
           <tr>
-            <th class="text-left">Channel</th>
+            <th class="text-left">
+              Account
+            </th>
             <th class="text-left">
               {{ select }}
             </th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in resp" :key="item.channel">
+          <tr v-for="item in resp" :key="item.account">
             <td>
-              <nuxt-link :href="item.channel" target="_blank">{{
-                item.channel
-              }}</nuxt-link>
+              <nuxt-link :to="'/' + item.account">{{ item.account }}</nuxt-link>
             </td>
-            <td>
-              {{ select === "Shares" ? parseFloat(item.value).toFixed(3) : item.value }}
-            </td>
+            <td>{{ select === 'Shares' ? parseFloat(item.value).toFixed(3) : item.value }}</td>
           </tr>
         </tbody>
       </v-table>
@@ -43,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-const title = 'Telegram Channels'
+const title = 'Top Voice Accounts'
 const route = useRoute()
 const router = useRouter()
 const selects = ['Shares', 'Awards']
@@ -54,22 +52,20 @@ const limits = [10, 25, 50, 100, 1000]
 let limit = ref(route.query.limit ? route.query.limit : limits[0])
 
 const config = useRuntimeConfig()
-const { pending, data: resp } = useAsyncData(
-  "/telegram/top_channels",
-  async () =>
-    $fetch("/telegram/top_channels", {
-      baseURL: config.public.apiBaseUrl,
-      params: {
-        by: select.value.toLowerCase(),
-        to_date: new Date().toISOString(),
-        from_date: getDateByPeriod(period.value).toISOString(),
-        in_top: limit.value,
-        to_skip: 0,
-      },
-    }),
+const { pending, data: resp } = useAsyncData("/voice/top_accounts",
+  async () => $fetch("/voice/top_accounts", {
+    baseURL: config.public.apiBaseUrl,
+    params: {
+      by: select.value.toLowerCase(),
+      to_date: (new Date()).toISOString(),
+      from_date: getDateByPeriod(period.value).toISOString(),
+      in_top: limit.value,
+      to_skip: 0
+    },
+  }),
   {
-    transform: (data: any) => { return data['channels'] },
-    watch: [select, period, limit],
+    transform: (data: any) => { return data['accounts'] },
+    watch: [select, period, limit]
   }
 )
 
@@ -82,4 +78,5 @@ watch([select, period, limit], (newValues) => {
     },
   })
 })
+
 </script>

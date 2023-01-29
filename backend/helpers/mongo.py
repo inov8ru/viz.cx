@@ -2,6 +2,7 @@
 import datetime as dt
 import os
 import pymongo
+import re
 from helpers.enums import OpType, ops_custom, ops_shares
 
 db = pymongo.MongoClient(os.getenv("MONGO", ""))[os.getenv("DB_NAME", "")]
@@ -575,18 +576,19 @@ def get_top_readdleme_posts_by_shares_in_period(
 
 
 def get_readdleme_post_awards_and_shares_in_period(
-    link_to_post: str = "viz://@readdle/22099872/",
-    to_date: dt.datetime = dt.datetime.now(),
-    from_date: dt.datetime = dt.datetime.now() - dt.timedelta(weeks=1),
+    link_to_post: str,
+    to_date: dt.datetime,
+    from_date: dt.datetime,
 ) -> dict:
-    """Return Readdle.Me post awards count and received SHARES in period"""
-    memo_post_link = link_to_post
+    """Return Voice post awards count and received SHARES in period"""
+    memo_post_link = "viz://" + link_to_post.split("viz://", 1)[-1]
+    regex = "^" + re.escape(memo_post_link) + "($|\\/)"
     result = coll_ops[OpType.receive_award].aggregate(
         [
             {
                 "$match": {
                     "timestamp": {"$gt": from_date, "$lt": to_date},
-                    "op.memo": memo_post_link,
+                    "op.memo": {"$regex": regex},
                 }
             },
             {
@@ -603,18 +605,18 @@ def get_readdleme_post_awards_and_shares_in_period(
         result = result[0]
         result["post_link"] = result.pop("_id")[0]
     else:
-        result = {"awards": 0, "shares": 0, "post_link": link_to_post}
+        result = {"awards": 0, "shares": 0, "post_link": memo_post_link}
     return result
 
 
 def get_top_readdleme_authors_by_shares_in_period(
-    to_date: dt.datetime = dt.datetime.now(),
-    from_date: dt.datetime = dt.datetime.now() - dt.timedelta(weeks=1),
-    in_top: int = 5,
-    to_skip: int = 0,
+    to_date: dt.datetime,
+    from_date: dt.datetime,
+    in_top: int,
+    to_skip: int,
 ) -> list:
     """Return top Readdle.Me authors by SHARES."""
-    result = list(
+    data = list(
         coll_ops[OpType.receive_award].aggregate(
             [
                 {
@@ -652,19 +654,17 @@ def get_top_readdleme_authors_by_shares_in_period(
             ]
         )
     )
-    i = 0
-    for item in result:
-        link_to_author = "viz://" + item["_id"]
-        result[i] = {link_to_author: item["shares"]}
-        i += 1
+    result = list()
+    for item in data:
+        result.append({"account": item["_id"], "value": item["shares"]})
     return result
 
 
 def get_top_readdleme_posts_by_awards_in_period(
     to_date: dt.datetime,
     from_date: dt.datetime,
-    in_top,
-    to_skip,
+    in_top: int,
+    to_skip: int,
 ) -> list:
     """Return top Readdle.Me posts by awards count."""
     data = list(
@@ -696,13 +696,13 @@ def get_top_readdleme_posts_by_awards_in_period(
 
 
 def get_top_readdleme_authors_by_awards_in_period(
-    to_date: dt.datetime = dt.datetime.now(),
-    from_date: dt.datetime = dt.datetime.now() - dt.timedelta(weeks=1),
-    in_top: int = 5,
-    to_skip: int = 0,
+    to_date: dt.datetime,
+    from_date: dt.datetime,
+    in_top: int,
+    to_skip: int,
 ) -> list:
     """Return top Readdle.Me authors by awards count."""
-    result = list(
+    data = list(
         coll_ops[OpType.receive_award].aggregate(
             [
                 {
@@ -739,11 +739,9 @@ def get_top_readdleme_authors_by_awards_in_period(
             ]
         )
     )
-    i = 0
-    for item in result:
-        link_to_author = "viz://" + item["_id"]
-        result[i] = {link_to_author: item["awards"]}
-        i += 1
+    result = list()
+    for item in data:
+        result.append({"account": item["_id"], "value": item["awards"]})
     return result
 
 
